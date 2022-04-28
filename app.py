@@ -13,6 +13,8 @@ from bson.objectid import ObjectId
 from twilio.twiml.voice_response import VoiceResponse, Connect, Gather
 from twilio.rest import Client
 
+import redis
+
 # setting up logging
 logger = logging.getLogger('PureTalk-Twilio')
 
@@ -31,7 +33,13 @@ logger.addHandler(fh)
 app = Flask(__name__)
 app.secret_key = '2abceVR5ENE7FgMxXdMwuzUJKC2g8xgy'
 
+app.redis = redis.Redis(
+    host='127.0.0.1',
+    port=6379,
+    password=config.redis_password)
+
 app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
+app.mongo_client = pymongo.MongoClient("mongodb+srv://admin:QM6icvpQ6SlOveul@cluster0.vc0rw.mongodb.net/myFirstDatabase?retryWrites=true&w=majority")
 
 @app.route('/recording/callback', methods=['POST'])
 def upload_recording():
@@ -52,8 +60,8 @@ def upload_recording():
         }
         logger.debug('\t Update Data: {}'.format(str(updateData)))
         try:
-            client = pymongo.MongoClient("mongodb+srv://admin:QM6icvpQ6SlOveul@cluster0.vc0rw.mongodb.net/myFirstDatabase?retryWrites=true&w=majority")
-            mongoDB = client['jamesbon']
+            
+            mongoDB = app.mongo_client['jamesbon']
             leads_col = mongoDB['leads']
             search_query = {
                 "call_logs.call_id":call_id
@@ -68,7 +76,7 @@ def upload_recording():
             leads_col.update_one(search_query, update_query)
             leadRow = leads_col.find_one(search_query)
             logger.debug('\t Committed Data')
-            client.close()
+            
             try:
                 recording_status = request.form['RecordingStatus']
                 if leadRow['status'] == 'voicemail':
@@ -86,10 +94,6 @@ def upload_recording():
             except:
                 pass
         except:
-            try:
-                client.close()
-            except:
-                pass
             pass
     except:
         logger.error('Got Nothing')
@@ -100,8 +104,8 @@ def upload_recording():
 def updateStatus():
     try:
         logger.debug('Call Events Data: {}'.format(str(request.form)))
-        client = pymongo.MongoClient("mongodb+srv://admin:QM6icvpQ6SlOveul@cluster0.vc0rw.mongodb.net/myFirstDatabase?retryWrites=true&w=majority")
-        mongoDB = client['jamesbon']
+        
+        mongoDB = app.mongo_client['jamesbon']
         leads_col = mongoDB['leads']
         campaigns_col = mongoDB['campaigns']
         company_billing_col = mongoDB['company_billing']
@@ -262,7 +266,7 @@ def updateStatus():
             leads_col.update_one(search_query, update_query)
         except:
             pass
-        client.close()
+        
     except:
         pass
     return jsonify({"Message":"Success"})
@@ -270,8 +274,8 @@ def updateStatus():
 @app.route('/calls/amd', methods=['POST'])
 def updateAMD():
     try:
-        client = pymongo.MongoClient("mongodb+srv://admin:QM6icvpQ6SlOveul@cluster0.vc0rw.mongodb.net/myFirstDatabase?retryWrites=true&w=majority")
-        mongoDB = client['jamesbon']
+        
+        mongoDB = app.mongo_client['jamesbon']
         leads_col = mongoDB['leads']
         logger.debug('AMD Data: {}'.format(str(request.form)))
         if request.form['AnsweredBy'] != 'human':
@@ -323,7 +327,7 @@ def updateAMD():
             #logger.debug('\t Stage Data')
             #db.session.commit()
             logger.debug('\t Committed Data')
-        client.close()
+        
     except:
         pass
     return jsonify({"Message":"Success"})
@@ -331,8 +335,8 @@ def updateAMD():
 @app.route('/calls/interested', methods=['POST'])
 def updateInterest():
     try:
-        client = pymongo.MongoClient("mongodb+srv://admin:QM6icvpQ6SlOveul@cluster0.vc0rw.mongodb.net/myFirstDatabase?retryWrites=true&w=majority")
-        mongoDB = client['jamesbon']
+        
+        mongoDB = app.mongo_client['jamesbon']
         post_data = request.json
         logger.debug('Interest Data: {}'.format(str(request.json)))
         leads_col = mongoDB['leads']
@@ -445,7 +449,7 @@ def updateInterest():
                 req = requests.post(request_url, json=request_body, headers=req_headers)
         except:
             pass
-        client.close()
+        
         return jsonify({"Message":"Success"})
     except:
         return jsonify({"Message":"Failure"})
@@ -453,8 +457,8 @@ def updateInterest():
 @app.route('/calls/voicemail', methods=['POST'])
 def updateVoicemail():
     try:
-        client = pymongo.MongoClient("mongodb+srv://admin:QM6icvpQ6SlOveul@cluster0.vc0rw.mongodb.net/myFirstDatabase?retryWrites=true&w=majority")
-        mongoDB = client['jamesbon']
+        
+        mongoDB = app.mongo_client['jamesbon']
         post_data = request.json
         logger.debug('Interest Data: {}'.format(str(request.json)))
         leads_col = mongoDB['leads']
@@ -478,8 +482,8 @@ def updateVoicemail():
 def callHangup(call_sid):
     try:
         logger.debug('Hangup Data')
-        client = pymongo.MongoClient("mongodb+srv://admin:QM6icvpQ6SlOveul@cluster0.vc0rw.mongodb.net/myFirstDatabase?retryWrites=true&w=majority")
-        mongoDB = client['jamesbon']
+        
+        mongoDB = app.mongo_client['jamesbon']
         leads_col = mongoDB['leads']
         search_query = {
             "call_logs.call_id":call_sid
@@ -525,7 +529,7 @@ def callHangup(call_sid):
                 logger.error('\t\t Failed Sending Stop Request')
         except:
             logger.error('\t Failed to stop recording')
-        client.close()
+        
         return jsonify({"Message":"Success"})
     except:
         return jsonify({"Message":"Failure"})
@@ -533,8 +537,8 @@ def callHangup(call_sid):
 @app.route('/calls/dnc', methods=['POST'])
 def updateLeadDNC():
     try:
-        client = pymongo.MongoClient("mongodb+srv://admin:QM6icvpQ6SlOveul@cluster0.vc0rw.mongodb.net/myFirstDatabase?retryWrites=true&w=majority")
-        mongoDB = client['jamesbon']
+        
+        mongoDB = app.mongo_client['jamesbon']
         post_data = request.json
         logger.debug('Interest Data: {}'.format(str(request.json)))
         leads_col = mongoDB['leads']
@@ -567,8 +571,8 @@ def callDialBack():
 @app.route('/calls/xfer_number/<token>', methods=['GET'])
 def getTransferNumber(token):
     try:
-        client = pymongo.MongoClient("mongodb+srv://admin:QM6icvpQ6SlOveul@cluster0.vc0rw.mongodb.net/myFirstDatabase?retryWrites=true&w=majority")
-        mongoDB = client['jamesbon']
+        
+        mongoDB = app.mongo_client['jamesbon']
         virtual_col = mongoDB['virtual_agents']
         filter_by = {
             '_id':ObjectId(token)
@@ -576,7 +580,7 @@ def getTransferNumber(token):
         virtual_admin = virtual_col.find_one(filter_by)
         if virtual_admin:
             return jsonify({'number':virtual_admin['xfer']})
-        client.close()
+        
     except:
         pass
     return jsonify({'number':'Failure'})

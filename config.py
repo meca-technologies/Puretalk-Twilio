@@ -4,6 +4,8 @@ file_queue="C:\Work\Puretalk-AI-Queue\queue"
 brand_path="./static/img/brand"
 profile_path="./static/img/profile"
 debug=True
+
+redis_password="Jamesbond007!@"
 SECRET_KEY = b'\xfc/\xfd\x93P\x87\xe1\xe6\xa2\xe3tq%\x10\xa0]'
 SMTP_PASSWORD="Jamesbond007!@#$%"
 
