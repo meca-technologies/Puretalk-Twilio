@@ -1,4 +1,4 @@
-# Puretalk Twilio
+# Puretalk Twilio - Puretalk
 ## Stack Overview
 ![Stack Overview](https://dashboard.puretalk.ai/static/img/stack-vf-sm.jpg?v=1)
 ## Diagram
